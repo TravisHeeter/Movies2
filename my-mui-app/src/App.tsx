@@ -321,7 +321,6 @@ const OrdersGrid: React.FC = () => {
               "& .MuiDataGrid-cell": {
                 borderColor: "divider",
                 fontSize: "0.875rem",
-                lineHeight: "3",
               },
               "& .MuiDataGrid-footerContainer": {
                 borderTop: "1px solid",
