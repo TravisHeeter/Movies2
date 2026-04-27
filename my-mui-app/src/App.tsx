@@ -12,6 +12,14 @@ import {
   CssBaseline,
   ThemeProvider,
   createTheme,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Divider,
+  Grid,
+  IconButton,
 } from "@mui/material";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -83,6 +91,83 @@ const IconPending: React.FC<{ color: string }> = ({ color }) => (
     <polyline points="12 6 12 12 16 14" />
   </svg>
 );
+
+const IconClose: React.FC = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+// ─── Order Detail Modal ───────────────────────────────────────────────────────
+
+interface OrderDetailModalProps {
+  order: Order | null;
+  onClose: () => void;
+}
+
+const DetailRow: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
+  <Box>
+    <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+      {label}
+    </Typography>
+    <Typography variant="body1" fontWeight={500} sx={{ mt: 0.25 }}>
+      {value}
+    </Typography>
+  </Box>
+);
+
+const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, onClose }) => {
+  if (!order) return null;
+  return (
+    <Dialog open={!!order} onClose={onClose} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+      <DialogTitle sx={{ pb: 1, pr: 6 }}>
+        <Typography variant="h6" fontWeight={700}>{order.orderId}</Typography>
+        <Typography variant="caption" color="text.secondary">Order details</Typography>
+        <IconButton onClick={onClose} size="small" sx={{ position: "absolute", top: 14, right: 14, color: "text.secondary" }}>
+          <IconClose />
+        </IconButton>
+      </DialogTitle>
+
+      <Divider />
+
+      <DialogContent sx={{ pt: 3 }}>
+        {/* Status banner */}
+        <Box sx={{ mb: 3, p: 2, borderRadius: 2, bgcolor: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Order Total
+            </Typography>
+            <Typography variant="h4" fontWeight={800} color="primary">
+              ${order.total.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </Typography>
+          </Box>
+          <StatusChip status={order.status} />
+        </Box>
+
+        {/* Detail grid */}
+        <Grid container spacing={3}>
+          <Grid item xs={6}><DetailRow label="Customer" value={order.customer} /></Grid>
+          <Grid item xs={6}><DetailRow label="Date" value={new Date(order.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} /></Grid>
+          <Grid item xs={12}><Divider /></Grid>
+          <Grid item xs={6}><DetailRow label="Product" value={order.product} /></Grid>
+          <Grid item xs={6}><DetailRow label="Category" value={order.category} /></Grid>
+          <Grid item xs={4}><DetailRow label="Quantity" value={order.quantity} /></Grid>
+          <Grid item xs={4}><DetailRow label="Unit Price" value={`$${order.unitPrice.toFixed(2)}`} /></Grid>
+          <Grid item xs={4}><DetailRow label="Region" value={order.region} /></Grid>
+        </Grid>
+      </DialogContent>
+
+      <Divider />
+
+      <DialogActions sx={{ px: 3, py: 2 }}>
+        <Button onClick={onClose} variant="contained" disableElevation sx={{ borderRadius: 2, textTransform: "none", fontWeight: 600 }}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 // ─── Status Chip ──────────────────────────────────────────────────────────────
 
@@ -209,7 +294,7 @@ const COLUMNS: GridColDef<Order>[] = [
 const theme = createTheme({
   palette: {
     mode: "light",
-    primary:   { main: "#353638" },
+    primary:   { main: "#1a56db" },
     secondary: { main: "#7e3af2" },
   },
   shape: { borderRadius: 8 },
@@ -221,8 +306,9 @@ const theme = createTheme({
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const OrdersGrid: React.FC = () => {
-  const [sortModel,   setSortModel]   = useState<GridSortModel>([{ field: "date", sort: "desc" }]);
-  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+  const [sortModel,    setSortModel]    = useState<GridSortModel>([{ field: "date", sort: "desc" }]);
+  const [filterModel,  setFilterModel]  = useState<GridFilterModel>({ items: [] });
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const summary = useMemo(() => {
     const totalRevenue    = ORDERS.reduce((s, o) => s + o.total, 0);
@@ -284,6 +370,7 @@ const OrdersGrid: React.FC = () => {
             onSortModelChange={setSortModel}
             filterModel={filterModel}
             onFilterModelChange={setFilterModel}
+            onRowClick={(params) => setSelectedOrder(params.row)}
             slots={{ toolbar: GridToolbar }}
             slotProps={{
               toolbar: {
@@ -317,7 +404,8 @@ const OrdersGrid: React.FC = () => {
                   color: "text.secondary",
                 },
               },
-              "& .MuiDataGrid-row:hover": { bgcolor: "#d7ffe0" },
+              "& .MuiDataGrid-row": { cursor: "pointer" },
+              "& .MuiDataGrid-row:hover": { bgcolor: "#f0f4ff" },
               "& .MuiDataGrid-cell": {
                 borderColor: "divider",
                 fontSize: "0.875rem",
@@ -329,6 +417,9 @@ const OrdersGrid: React.FC = () => {
             }}
           />
         </Paper>
+
+        {/* Order Detail Modal */}
+        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
       </Box>
     </ThemeProvider>
   );
